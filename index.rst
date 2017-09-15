@@ -1,4 +1,29 @@
 :tocdepth: 2
+**Important note:** There exists an un-merged branch
+``u/djreiss/DM-3704`` of ``ip_diffim`` and ``pipe_tasks`` which
+implements tickets
+`DM-3704 <https://jira.lsstcorp.org/browse/DM-3704>`__,
+`DM-5294 <https://jira.lsstcorp.org/browse/DM-5294>`__ and
+`DM-5295 <https://jira.lsstcorp.org/browse/DM-5295>`__, a refactor of
+the large and sprawling code in the existing command-line
+task\ ``lsst.pipe.tasks.imageDifference.py``. At the time of this
+writing, the responsibilities of the existing task were split into two
+separate command-line tasks (and their corresponding pipe tasks) and
+moved from ``pipe_tasks`` into ``ip_diffim``. These new tasks are in the
+submodules ``lsst.ip.diffim.makeDiffim`` and
+``lsst.ip.diffim.processDiffim``. Correspondingly,
+``imageDifference.py`` is now primarily a wrapper around these two tasks
+which call ``MakeDiffimTask.run()`` and ``ProcessDiffimTask.run()`` in
+order, taking the same exact input and producing the same exact output
+as previously.
+
+The remaining text below will assume that this refactor eventually gets
+merged into master, and thus will refer to ``makeDiffim``,
+``processDiffim``, etc.
+
+1. Alard and Lupton (AL) PSF matching and image subtraction
+===========================================================
+
 The AL algorithm is used by default in ``ip_diffim`` to perform PSF
 matching and image subtraction. It performs quickly and well because it
 uses small regions surrounding bright, isolated stars around to compute
@@ -15,13 +40,6 @@ parameters may need to be tuned. Many of these important parameters are
 buried deep in the ``kernel`` config parameter of the ``subtract``
 algorithm (a reference to the ``lsst.ip.diffim.ImagePsfMatchTask``
 task).
-
-The image subtraction script is in ``lsst.pipe.tasks.imageDifference``,
-which performs image subtraction and then detects and measures sources
-(``diaSources``) in the subtractions. This task itself very recently was
-refactored (DM-3704) and split into two separate tasks which now reside
-in ``ip_diffim``: ``MakeDiffimTask`` and ``ProcessDiffimTask``, which
-are called sequentially from the command-line ``imageDifference.py``.
 
 In `Figure 1 <#figure-1>`__ and `Figure 2 <#figure-2>`__, we show an
 image subtraction using the AL algorithm on an example DECam image. Here
@@ -43,7 +61,7 @@ PSF-matching stars, as well as generation of output image files, but
 *excludes* any diaSource detection or measurement.
 
 1.1. Pre-convolution
-====================
+--------------------
 
 An un-published modification to the AL algorithm was implemented, which
 accounts for the occasions when the width of the PSF of the science
@@ -69,7 +87,7 @@ upon which PSF matching is performed to ensure that the larger PSF of
 the pre-convolved science exposure is fully included.
 
 1.2. AL Decorrelation
-=====================
+---------------------
 
 When the template exposure has significant noise (i.e., is not
 constructed from a number of coadds), then AL will correlate the noise
@@ -110,7 +128,7 @@ algorithm on a sample DECam exposure by :math:`\sim 1.7` second, or
 about 5.4%.
 
 1.2.1. Decorrelation + pre-convolution = trouble
-------------------------------------------------
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The variant of the expression for performing decorrelation in the case
 of pre-convolution (described above) is given by the deconvolution
@@ -166,7 +184,7 @@ is functional. It is implemented in pure python; although much of the
 expensive calculations are performed under-the-hood in ``C`` or
 ``Fortran`` via ``scipy`` or ``afw``, be they FFTs or convolutions.
 
-We show an example Zogy diffim below in `Figure 4 <#figure-4>`__. The
+We show an example Zogy diffim below in `Figure 4a <#figure-4a>`__. The
 standard Zogy implementation, in which all convolutions are performed in
 frequency space, is on the bottom-left. It shows clear signs of aliasing
 and fringing-related artifacts around bright stars. It also shows (with
@@ -177,25 +195,47 @@ performed in the Zogy code -- it is expected to be accurately performed
 during initial exposure calibration. This reveals a weakness of Zogy
 relative to AL -- the requirement of accurate [relative] calibration
 between the two images.) This may be seen more readily in an other
-subimage from the same DECam image (`Figure 5 <#figure-5>`__).
+subimage from the same DECam image (`Figure 4b <#figure-4b>`__).
 
-.. figure:: _static/fig04.png
-   :name: figure-4
+.. figure:: _static/fig04a.png
+   :name: figure-4a
 
    Subsections of a DECam Zogy image subtraction, including warped and
    PSF-matched template, science image, and the results of the
    "standard" and image-space versions of the Zogy algorithm.
 
+.. figure:: _static/fig04b.png
+   :name: figure-4b
+
+   Subsections of the same DECam Zogy image subtraction as in Figure 4a.
+
+I should note that this fringing was observed by Tim Axelrod in another
+Zogy implementation when a certain PSFex PSF configuration was used
+(pixel based? too small PSF dimensions? "It certainly is a result of bad
+parameters to psfex, and in particular the footprint size for
+determining the psf being way too big for this data."). I include his
+example below in `Figure 5 <#figure-5>`__. It appears to be an
+:math:`S_{corr}` image (see Section 2.3, below).
+
 .. figure:: _static/fig05.png
    :name: figure-5
 
-   Subsections of the same DECam Zogy image subtraction as in Figure 4.
+   Example Zogy image with fringing from Tim Axelrod
 
 **Timing:** The current implementation of Zogy takes roughly 26.6
 seconds, or :math:`0.78\times` as long (i.e., is :math:`\sim22\%`
 faster) to run than the AL algorithm with decorrelation enabled. There
 has been limited attempt to date to optimize the Zogy algorithm, and
 some simple profiling is likely to highlight several bottlenecks.
+
+**Additional known issue:** Zogy relies upon FFTs of the PSFs of both
+input images. If those PSFs are not the same dimension, then one of them
+needs to be padded or trimmed. We also need to ensure that each PSFs are
+centered correctly, and centered at the same pixel coordinate. There is
+much code in ``lsst.ip.diffim.zogy`` for making these corrections, yet
+sometimes the resulting Zogy diffim has 1-pixel offsets from expected. I
+have not yet been able to fix this in all cases, and it is not clear why
+for some images this becomes an issue, while for others it is not.
 
 2.1. Variants (image-space convolutions)
 ----------------------------------------
@@ -222,7 +262,8 @@ masks/variance correctly should be less of a concern.
 
 **Timing:** The run-time of the image-space version of Zogy is
 :math:`\sim55.4` seconds, or nearly :math:`2.1\times` as long as the
-"pure" Fourier-space version.
+"pure" Fourier-space version. There are certainly some optimizations to
+be made if this path is pursued.
 
 2.3. The ZOGY :math:`S_{corr}` image
 ------------------------------------
@@ -250,7 +291,7 @@ input images.
 
    Subsections of a DECam Zogy image subtraction, including warped and
    PSF-matched template, science image, and the results of pre-convolved
-   AL subtraction, and the Zogy :math:`S_corr` likelihood image.
+   AL subtraction, and the Zogy :math:`S_{corr}` likelihood image.
 
 2.4. Issues, unimplemented aspects, artifacts
 ---------------------------------------------
@@ -320,6 +361,11 @@ image and the resulting invalid pixels at the borders are cut away
 before passing the valid subExposure back to the ``reducer`` (see the
 inset of `Figure 7 <#figure-7>`__).
 
+**Known issue:** We note that the construction of the grid itself is
+straightforward but may be brittle for certain image dimensions. The
+requirement of adjusting grid parameters for a given image geometry
+should be addressed.
+
 The returned, modified subExposures are then stitched together by the
 ``reducer`` subtask into a final output ``Exposure``, averaging the
 overlapping regions (by default).
@@ -332,17 +378,156 @@ simply needs to subclass the ``ImageMapper`` task and the
 3.1.1. imageMapReduce: AL decorrelation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+The spatially varying AL decorrelation is implemented in the
+``lsst.ip.diffim.imageDecorrelation`` submodule via the
+``DecorrelateALKernelMapper`` subclass of ``ImageMapper`` and the
+corresponding ``DecorrelateALKernelMapReduceConfig`` subclass of
+``ImageMapReduceConfig``. Then the ``DecorrelateALKernelSpatialTask``
+pipe task wraps the construction of the ``ImageMapReduceTask`` and
+setting it up to use the ``DecorrelateALKernelMapper`` as its
+``mapper``. It is this task (the ``DecorrelateALKernelSpatialTask``) is
+called from the ``makeDiffim`` task.
+
+**Timing:** Surprisingly, the spatially-varying AL decorrelation is very
+slightly *faster* than the non-spatially-varying version. The reason for
+this is unclear, since more area is convolved (due to overlapping grid
+elements) with the ``imageMapReduced`` variant.
+
 3.1.2. imageMapReduce: Zogy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-3.2. Known issues
------------------
+The spatially varying AL decorrelation is implemented in the
+``lsst.ip.diffim.imageDecorrelation`` submodule via the ``ZogyMapper``
+subclass of ``ImageMapper`` and the corresponding
+``ZogyMapReduceConfig`` subclass of ``ImageMapReduceConfig``. Then the
+``ZogyImagePsfMatchTask`` pipe task wraps the construction of the
+``ImageMapReduceTask`` and setting it up to use the
+``DecorrelateALKernelMapper`` as its ``mapper``. It is this task (the
+``DecorrelateALKernelSpatialTask``) is called from the ``makeDiffim``
+task.
+
+**Timing:** Contrary to the spatially-varying AL decorrelation, the
+spatially-varying Zogy implementation takes :math:`\sim 51.7` seconds,
+or :math:`\sim 93\%` longer than the non-spatially-varying version. The
+reasons for this is unclear, except (as mentioned above) with the
+spatially-varying variant, the Zogy procedure is actually performed on
+significantly more image area due to the necessity of overlapping grid
+elements. It is quite possible that the grid configuration could be
+modified to optimize this and bring down computation time; this has not
+been thoroughly investigated.
+
+3.2. imageMapReduce: construction of new PSFs
+---------------------------------------------
+
+Since the PSFs of image subtractions constructed via spatially-varying
+computations are themselves expected to vary, we need to attach a new
+PSF to the new exposures that contain that spatially-varying
+information. A natural choice was to use a
+``lsst.meas.algorithms.CoaddPsf``, which constructs, as it sounds, a
+spatially-varying PSF by averaging PSFs from images which contributed to
+various regions of a coadd. Since an Exposure constructed by
+``imageMapReduce`` is essentially a coadd, this seemed like a simple and
+natural choice. It however has severall disadvantages.
+
+3.2.1. ``CoaddPsf`` issues
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+First, there will be slight discontinuities in PSF from one subregion to
+the next. If the PSF is smoothly-varying, this should not be an issue,
+but if a star falls on the edges of such a boundary, this could be a
+problem. The degree or extent of this issue has yet to be explored. An
+alternative is to construct a smoothly varying PSF fitted or
+interpolated from the PSFs at the center of each grid element, e.g.
+using ``lsst.meas.algorithms.PcaPsf``.
+
+Second, there is a significant issue with the speed of measurement. The
+process of "finding" the correct PSF to use for a given region of an
+image slows down any use of the ``CoaddPsf`` for spatially-varying
+information. Detection uses a single PSF computed from the center of the
+exposure, and thus is not slowed down, but measurement is slowed down
+immensely in this case. This can (and should) be fixed, as above, by
+using a smoothly-varying PSF subclass that was written for speed, such
+as ``PcaPsf``.
 
 4. Dipole fitting complications
 ===============================
 
-5. Conclusions and recommendations for future work
-==================================================
+As described in `DMTN-007 <https://dmtn-007.lsst.io/>`__, the
+measurement of dipoles was improved by incorporating "prior" information
+from the PSF-matched, warped template (we'll call that :math:`T`) and
+the science image (:math:`S`) to constrain the dipole fitting, as well
+as the data from the image subtraction (:math:`D`) itself. At the time
+it was assumed that AL would be used and decorrelation and/or Zogy were
+not yet invented. Thus, we used the (still correlated) warped and
+PSF-matched version of the template :math:`T'` as input to the fitting
+algorithm. In fact, since we had all of the information, we passed
+:math:`T'`, :math:`S`, and :math:`D` all to the dipole fitting
+algorithm.
+
+AL decorrelation adds a complication that including the correlated
+warped PSF-matched template :math:`T'` is not technically correct, since
+:math:`D` is no longer equal to the decorrelated image subtraction
+(we'll call that :math:`D'`) minus :math:`T'`:
+
+.. math::
+
+
+   D' \neq S - T.
+
+Instead, :math:`D'` now equals :math:`S` minus a decorrelated version of
+:math:`T` (let's call that :math:`T'`), which we have not computed.
+However, we *can* compute
+
+.. math::
+
+
+   T' = S - D',
+
+and then use the combination of :math:`T'`, :math:`S`, and :math:`D'`
+for dipole fitting. Another complication arises that the PSF of
+:math:`T'` has not been computed; however we will assume that it
+suffices to use the PSF of :math:`S` (to which :math:`T` has been
+PSF-matched).
+
+This will not work for Zogy, however, since the template and science
+image are each convolved with a non-PSF-like kernel, which leads to them
+individually looking quite odd -- but that oddness "cancels" when the
+images are finally subtracted in the end. In principle, we could simply
+feed the original science and warped (non-psf-matched) template to the
+dipole fitting code, as all they are really used for are to constrain
+the dipole lobe centroids. However, that will involve some modification
+of the dipole fitting code so that it can use three different PSFs --
+the template PSF for one lobe, the science image PSF for the other lobe,
+and the diffim PSF for the joint dipole fit. This would not be dificult;
+it has simply not been done.
+
+5. Appendix
+===========
+
+5.1. Commands for running image subtraction in various modes
+------------------------------------------------------------
+
+Example output from the various runs of the image subtraction pipeline
+on a single pair of DECam exposures is shown in the [notebook attached
+to this DMTN's repository](\_notebooks/figures-and-debugging.ipynb].
+Scripts were used to perform these runs, and they have been saved in the
+`DM-3704 branch of
+``ip_diffim`` <https://github.com/lsst/ip_diffim/tree/u/djreiss/DM-3704>`__
+and
+```pipe_tasks`` <https://github.com/lsst/pipe_tasks/tree/u/djreiss/DM-3704>`__.
+I now summarize these command-line configurations below:
+
+1. Configuration file ``diffimConfig.py`` for ``imageDifference.py``:
+
+   ::
+
+       config.makeDiffim.doWriteSubtractedExp=True
+       config.makeDiffim.doWriteMatchedExp=True
+       config.makeDiffim.doDecorrelation=True
+       config.makeDiffim.subtract='al'
+       config.makeDiffim.subtract['zogy'].zogyConfig.inImageSpace=False
+       from lsst.ip.diffim.getTemplate import GetCalexpAsTemplateTask
+       config.getTemplate.retarget(GetCalexpAsTemplateTask)
 
 --------------
 
@@ -353,10 +538,10 @@ simply needs to subclass the ``ImageMapper`` task and the
    when images are not properly flux-calibrated
 4. DONE: additional artifacts when zogy run with image-space
    convolutions
-5. imageMapReduce gridding could be optimized, right now makes the
+5. DONE: imageMapReduce gridding could be optimized, right now makes the
    map-reduce part slow.
-6. use of coaddPsf not ideal -- detection is fast but measurement is
-   SLOW
+6. DONE: use of coaddPsf not ideal -- detection is fast but measurement
+   is SLOW
 7. differences between what is produced by A&L vs. ZOGY (e.g. matched
    template, etc.) and how to handle that with DipoleFitting. Zogy in
    spatially varying mode does not return the matchedTemplate, and thus
@@ -364,7 +549,8 @@ simply needs to subclass the ``ImageMapper`` task and the
 
 -  the cross-convolved images in Zogy are not useful for dipole fitting.
 
-8. spatially-varying decorrelation is done by computing the kernel on
-   chunks, and then convolving it on those chunks. should consider
-   computing on chunks, then creating smoothly spatially-varying kernel,
-   then convolving the image w/ the spatially varying kernel
+8. WONTINCLUDE: spatially-varying decorrelation is done by computing the
+   kernel on chunks, and then convolving it on those chunks. should
+   consider computing on chunks, then creating smoothly
+   spatially-varying kernel, then convolving the image w/ the spatially
+   varying kernel
