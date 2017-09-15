@@ -529,28 +529,99 @@ I now summarize these command-line configurations below:
        from lsst.ip.diffim.getTemplate import GetCalexpAsTemplateTask
        config.getTemplate.retarget(GetCalexpAsTemplateTask)
 
---------------
+2. Run AL with and without decorrelation, (and decorrelation both
+   constant and spatially-varying):
 
-1. DONE: decorrelation + preconvolution aliasing issues
-2. DONE: zogy artifacts
-3. FIXED: issue with zogy when psfs have different dimensions (offset
-   due to psf padding) --- DONE: this is now fixed but points out issues
-   when images are not properly flux-calibrated
-4. DONE: additional artifacts when zogy run with image-space
-   convolutions
-5. DONE: imageMapReduce gridding could be optimized, right now makes the
-   map-reduce part slow.
-6. DONE: use of coaddPsf not ideal -- detection is fast but measurement
-   is SLOW
-7. differences between what is produced by A&L vs. ZOGY (e.g. matched
-   template, etc.) and how to handle that with DipoleFitting. Zogy in
-   spatially varying mode does not return the matchedTemplate, and thus
-   it is not used for dipole fititng.
+::
 
--  the cross-convolved images in Zogy are not useful for dipole fitting.
+    imageDifference.py calexpDir_b1631 --output decamDirTest_AL \
+              --id visit=289820 ccdnum=11 --templateId visit=288976 \
+              --configfile diffimConfig.py --config makeDiffim.doDecorrelation=False >& \
+                output_AL.txt
 
-8. WONTINCLUDE: spatially-varying decorrelation is done by computing the
-   kernel on chunks, and then convolving it on those chunks. should
-   consider computing on chunks, then creating smoothly
-   spatially-varying kernel, then convolving the image w/ the spatially
-   varying kernel
+::
+
+    imageDifference.py calexpDir_b1631 --output decamDirTest_ALDec_noSpatial \
+              --id visit=289820 ccdnum=11 --templateId visit=288976 \
+              --configfile diffimConfig.py >& output_ALDec_noSpatial.txt
+
+::
+
+    imageDifference.py calexpDir_b1631 --output decamDirTest_ALDec_yesSpatial \
+              --id visit=289820 ccdnum=11 --templateId visit=288976 \
+              --configfile diffimConfig.py --config makeDiffim.doSpatiallyVarying=True >& \                 output_ALDec_yesSpatial.txt
+
+3. Run Zogy (both constant and spatially-varing) and try both in Fourier
+   and real space:
+
+::
+
+    imageDifference.py calexpDir_b1631 --output decamDirTest_Zogy_noSpatial \
+              --id visit=289820 ccdnum=11 --templateId visit=288976 \
+              --configfile diffimConfig.py --config makeDiffim.subtract='zogy' >& \                 output_Zogy_noSpatial.txt
+
+::
+
+    imageDifference.py calexpDir_b1631 --output decamDirTest_Zogy_yesSpatial \
+              --id visit=289820 ccdnum=11 --templateId visit=288976 \
+              --configfile diffimConfig.py --config makeDiffim.subtract='zogy' \
+              --config makeDiffim.doSpatiallyVarying=True >& output_Zogy_yesSpatial.txt
+
+::
+
+    # replace 'inImageSpace=False' with 'inImageSpace=True' in diffimconfig.py
+    imageDifference.py calexpDir_b1631 --output decamDirTest_ZogyImSpace_noSpatial \
+                --id visit=289820 ccdnum=11 --templateId visit=288976 \
+                --configfile diffimConfig.py --config makeDiffim.subtract='zogy' \
+                    >& output_ZogyImSpace_noSpatial.txt
+
+::
+
+    # replace 'inImageSpace=False' with 'inImageSpace=True' in diffimconfig.py
+    imageDifference.py calexpDir_b1631 --output decamDirTest_ZogyImSpace_yesSpatial \
+                --id visit=289820 ccdnum=11 --templateId visit=288976 \
+                --configfile diffimConfig.py --config makeDiffim.subtract='zogy' \
+                --config makeDiffim.doSpatiallyVarying=True >& \                output_ZogyImSpace_yesSpatial.txt
+
+4. As mentioned above, run AL and Zogy with
+   ``makeDiffim.doPreConvolve=True`` to create pre-filtered diffim
+   (:math:`S_{corr}` in Zogy parlance). Note that the Ids for the
+   ``visit`` and ``templateId`` were swapped in this case.
+
+5. Finally, all of the timings listed above were measured using just the
+   ``makeDiffim.py`` command-line task, which performs image subtraction
+   but *not* detection and measurement. This requires a slightly
+   different config, ``makeDiffimConfig.py``:
+
+::
+
+    config.doWriteSubtractedExp=True
+    config.doWriteMatchedExp=True
+    config.doDecorrelation=True
+    config.subtract='al'
+    config.subtract['zogy'].zogyConfig.inImageSpace=False
+    from lsst.ip.diffim.getTemplate import GetCalexpAsTemplateTask
+    config.getTemplate.retarget(GetCalexpAsTemplateTask)
+
+And below are the commands used (prior to each run, ``rm -r DELETEME``
+was performed):
+
+::
+
+    time makeDiffim.py calexpDir_b1631 --output DELETEME --id visit=289820 ccdnum=11 --templateId visit=288976 --configfile makeDiffimConfig.py --config doDecorrelation=False
+
+    time makeDiffim.py calexpDir_b1631 --output DELETEME --id visit=289820 ccdnum=11 --templateId visit=288976 --configfile makeDiffimConfig.py --config doDecorrelation=True
+
+    time makeDiffim.py calexpDir_b1631 --output DELETEME --id visit=289820 ccdnum=11 --templateId visit=288976 --configfile makeDiffimConfig.py --config doDecorrelation=True --config doSpatiallyVarying=True
+
+    time makeDiffim.py calexpDir_b1631 --output DELETEME --id visit=289820 ccdnum=11 --templateId visit=288976 --configfile makeDiffimConfig.py --config subtract=zogy
+
+    time makeDiffim.py calexpDir_b1631 --output DELETEME --id visit=289820 ccdnum=11 --templateId visit=288976 --configfile makeDiffimConfig.py --config subtract=zogy --config doSpatiallyVarying=True
+
+    rpl -q 'inImageSpace=False' 'inImageSpace=True' makeDiffimConfig.py
+    time makeDiffim.py calexpDir_b1631 --output DELETEME --id visit=289820 ccdnum=11 --templateId visit=288976 --configfile makeDiffimConfig.py --config subtract=zogy
+    rpl -q 'inImageSpace=True' 'inImageSpace=False' makeDiffimConfig.py
+
+    time makeDiffim.py calexpDir_b1631 --output DELETEME --id visit=288976 ccdnum=11 --templateId visit=289820 --configfile makeDiffimConfig.py --config doDecorrelation=False --config doPreConvolve=True
+
+    time makeDiffim.py calexpDir_b1631 --output DELETEME --id visit=288976 ccdnum=11 --templateId visit=289820 --configfile makeDiffimConfig.py --config doDecorrelation=True --config doPreConvolve=True
