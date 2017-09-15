@@ -512,9 +512,9 @@ on a single pair of DECam exposures is shown in the [notebook attached
 to this DMTN's repository](\_notebooks/figures-and-debugging.ipynb].
 Scripts were used to perform these runs, and they have been saved in the
 `DM-3704 branch of
-``ip_diffim`` <https://github.com/lsst/ip_diffim/tree/u/djreiss/DM-3704>`__
-and
-```pipe_tasks`` <https://github.com/lsst/pipe_tasks/tree/u/djreiss/DM-3704>`__.
+ip\_diffim <https://github.com/lsst/ip_diffim/tree/u/djreiss/DM-3704>`__
+and of
+`pipe\_tasks <https://github.com/lsst/pipe_tasks/tree/u/djreiss/DM-3704>`__.
 I now summarize these command-line configurations below:
 
 1. Configuration file ``diffimConfig.py`` for ``imageDifference.py``:
