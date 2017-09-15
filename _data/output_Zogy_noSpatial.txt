@@ -1,0 +1,30 @@
+CameraMapper INFO: Loading exposure registry from /Users/dreiss/GIT_REPOS/TICKETS/DM-3704/temp/calexpDir_b1631/registry.sqlite3
+CameraMapper INFO: Loading Posix calib registry from /Users/dreiss/GIT_REPOS/TICKETS/DM-3704/temp/calexpDir_b1631
+CameraMapper INFO: Loading Posix calib registry from /Users/dreiss/GIT_REPOS/TICKETS/DM-3704/temp/decamDirTest_Zogy_noSpatial
+root INFO: Running: /Users/dreiss/GIT_REPOS/TICKETS/DM-3704/temp/pipe_tasks/bin/imageDifference2.py calexpDir_b1631 --output decamDirTest_Zogy_noSpatial --id visit=289820 ccdnum=11 --templateId visit=288976 --configfile diffimconfig.py --clobber-config --clobber-versions --config makeDiffim.subtract=zogy
+imageDifference INFO: Processing DataId(initialdata={'visit': 289820, 'ccdnum': 11}, tag=set([]))
+imageDifference.getTemplate INFO: Fetching calexp (DataId(initialdata={'ccdnum': 11, 'visit': 288976}, tag=set([]))) as template.
+imageDifference.makeDiffim INFO: Source selection via src product
+/Users/dreiss/lsstsw/stack/DarwinX86/meas_algorithms/13.0-21-g4da7aa72/python/lsst/meas/algorithms/objectSizeStarSelector.py:396: RuntimeWarning: invalid value encountered in less
+  bad = numpy.logical_or(bad, flux < self.config.fluxMin)
+/Users/dreiss/lsstsw/stack/DarwinX86/meas_algorithms/13.0-21-g4da7aa72/python/lsst/meas/algorithms/objectSizeStarSelector.py:399: RuntimeWarning: invalid value encountered in less
+  bad = numpy.logical_or(bad, width < self.config.widthMin)
+/Users/dreiss/lsstsw/stack/DarwinX86/meas_algorithms/13.0-21-g4da7aa72/python/lsst/meas/algorithms/objectSizeStarSelector.py:400: RuntimeWarning: invalid value encountered in greater
+  bad = numpy.logical_or(bad, width > self.config.widthMax)
+imageDifference.makeDiffim INFO: Selected 66 / 1888 sources for Psf matching (17 for control sample)
+imageDifference.makeDiffim.subtract INFO: Exposure means=219.171712, 229.370386; median=219.161888, 229.339081:
+imageDifference.makeDiffim.subtract INFO: Running Zogy algorithm: spatiallyVarying=False
+imageDifference.makeDiffim.subtract INFO: Template Wcs : 2.710179,-0.102466 -> 2.715435,-0.105083
+imageDifference.makeDiffim.subtract INFO: Science Wcs : 2.710194,-0.102443 -> 2.715450,-0.105059
+imageDifference.makeDiffim.subtract INFO: Astrometrically registering template to science image
+imageDifference.makeDiffim.subtract INFO: Running Zogy algorithm: inImageSpace=False
+imageDifference.makeDiffim INFO: Writing subtracted exposure, deepDiff_differenceExp
+imageDifference.processDiffim INFO: Running diaSource detection
+imageDifference.processDiffim.detection INFO: Detected 61 positive sources to 5.5 sigma.
+imageDifference.processDiffim.detection INFO: Detected 196 negative sources to 5.5 sigma
+imageDifference.processDiffim INFO: Merging detections into 221 sources
+imageDifference.processDiffim INFO: Running diaSource measurement: newDipoleFitting=True
+imageDifference.processDiffim.measurement INFO: Measuring 221 sources (221 parents, 0 children) 
+imageDifference.processDiffim INFO: Writing diaSources, deepDiff_diaSrc
+Exception AttributeError: "'super' object has no attribute '__del__'" in <bound method SqliteRegistry.__del__ of <lsst.daf.persistence.registries.SqliteRegistry object at 0x83f40db50>> ignored
+41.743u 5.193s 0:36.95 127.0%	0+0k 0+24io 14775pf+0w

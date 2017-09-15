@@ -515,7 +515,8 @@ Scripts were used to perform these runs, and they have been saved in the
 ip\_diffim <https://github.com/lsst/ip_diffim/tree/u/djreiss/DM-3704>`__
 and of
 `pipe\_tasks <https://github.com/lsst/pipe_tasks/tree/u/djreiss/DM-3704>`__.
-I now summarize these command-line configurations below:
+I now summarize these command-line configurations below. I also include
+the redirected output text files in this repo as well.
 
 1. Configuration file ``diffimConfig.py`` for ``imageDifference.py``:
 
@@ -558,7 +559,8 @@ I now summarize these command-line configurations below:
 
     imageDifference.py calexpDir_b1631 --output decamDirTest_Zogy_noSpatial \
               --id visit=289820 ccdnum=11 --templateId visit=288976 \
-              --configfile diffimConfig.py --config makeDiffim.subtract='zogy' >& \                 output_Zogy_noSpatial.txt
+              --configfile diffimConfig.py --config makeDiffim.subtract='zogy' >& \ 
+                    output_Zogy_noSpatial.txt
 
 ::
 
@@ -608,20 +610,34 @@ was performed):
 
 ::
 
-    time makeDiffim.py calexpDir_b1631 --output DELETEME --id visit=289820 ccdnum=11 --templateId visit=288976 --configfile makeDiffimConfig.py --config doDecorrelation=False
+    time makeDiffim.py calexpDir_b1631 --output DELETEME --id visit=289820 ccdnum=11 \
+        --templateId visit=288976 --configfile makeDiffimConfig.py \
+        --config doDecorrelation=False
 
-    time makeDiffim.py calexpDir_b1631 --output DELETEME --id visit=289820 ccdnum=11 --templateId visit=288976 --configfile makeDiffimConfig.py --config doDecorrelation=True
+    time makeDiffim.py calexpDir_b1631 --output DELETEME --id visit=289820 ccdnum=11 \
+        --templateId visit=288976 --configfile makeDiffimConfig.py \
+        --config doDecorrelation=True
 
-    time makeDiffim.py calexpDir_b1631 --output DELETEME --id visit=289820 ccdnum=11 --templateId visit=288976 --configfile makeDiffimConfig.py --config doDecorrelation=True --config doSpatiallyVarying=True
+    time makeDiffim.py calexpDir_b1631 --output DELETEME --id visit=289820 ccdnum=11 \
+        --templateId visit=288976 --configfile makeDiffimConfig.py \
+        --config doDecorrelation=True --config doSpatiallyVarying=True
 
-    time makeDiffim.py calexpDir_b1631 --output DELETEME --id visit=289820 ccdnum=11 --templateId visit=288976 --configfile makeDiffimConfig.py --config subtract=zogy
+    time makeDiffim.py calexpDir_b1631 --output DELETEME --id visit=289820 ccdnum=11 \
+        --templateId visit=288976 --configfile makeDiffimConfig.py --config subtract=zogy
 
-    time makeDiffim.py calexpDir_b1631 --output DELETEME --id visit=289820 ccdnum=11 --templateId visit=288976 --configfile makeDiffimConfig.py --config subtract=zogy --config doSpatiallyVarying=True
+    time makeDiffim.py calexpDir_b1631 --output DELETEME --id visit=289820 ccdnum=11 \
+        --templateId visit=288976 --configfile makeDiffimConfig.py --config subtract=zogy \
+        --config doSpatiallyVarying=True
 
     rpl -q 'inImageSpace=False' 'inImageSpace=True' makeDiffimConfig.py
-    time makeDiffim.py calexpDir_b1631 --output DELETEME --id visit=289820 ccdnum=11 --templateId visit=288976 --configfile makeDiffimConfig.py --config subtract=zogy
+    time makeDiffim.py calexpDir_b1631 --output DELETEME --id visit=289820 ccdnum=11 \
+        --templateId visit=288976 --configfile makeDiffimConfig.py --config subtract=zogy
     rpl -q 'inImageSpace=True' 'inImageSpace=False' makeDiffimConfig.py
 
-    time makeDiffim.py calexpDir_b1631 --output DELETEME --id visit=288976 ccdnum=11 --templateId visit=289820 --configfile makeDiffimConfig.py --config doDecorrelation=False --config doPreConvolve=True
+    time makeDiffim.py calexpDir_b1631 --output DELETEME --id visit=288976 ccdnum=11 \
+        --templateId visit=289820 --configfile makeDiffimConfig.py \
+        --config doDecorrelation=False --config doPreConvolve=True
 
-    time makeDiffim.py calexpDir_b1631 --output DELETEME --id visit=288976 ccdnum=11 --templateId visit=289820 --configfile makeDiffimConfig.py --config doDecorrelation=True --config doPreConvolve=True
+    time makeDiffim.py calexpDir_b1631 --output DELETEME --id visit=288976 ccdnum=11 \
+        --templateId visit=289820 --configfile makeDiffimConfig.py \
+        --config doDecorrelation=True --config doPreConvolve=True
