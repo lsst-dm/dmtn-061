@@ -84,7 +84,9 @@ of basic AL from the aforementioned 31.8 seconds to 55.6 seconds, an
 increase in run-time of :math:`\sim 75\%`. This is likely due to the
 need to increase the dimensions of the convolution kernels and stamps
 upon which PSF matching is performed to ensure that the larger PSF of
-the pre-convolved science exposure is fully included.
+the pre-convolved science exposure is fully included. Plus the extra
+convolution, which takes :math:`\sim 10` seconds on my machine on the
+single DECam CCD exposure.
 
 1.2. AL Decorrelation
 ---------------------
@@ -124,8 +126,8 @@ section (3) below for details about how the decorrelation is performed,
 when accounting for spatially-varying PSFs and noise.
 
 **Timing:** Enabling decorrelation increases the run-time of the AL
-algorithm on a sample DECam exposure by :math:`\sim 1.7` second, or
-about 5.4%.
+algorithm on a sample DECam exposure by :math:`\sim 10.5` seconds, or
+about 33%.
 
 1.2.1. Decorrelation + pre-convolution = trouble
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -169,10 +171,7 @@ pre-convolution is also enabled. These images show the same issues as
 the non-spatially-varying version described above.
 
 **Timing:** Enabling decorrelation along with pre-convolution increases
-run-time from 55.6 to 68.0 seconds, or an increase of 22.3%. It is not
-clear why decorrelation in the case of pre-convolution increases
-run-time so significantly when it does not do so when pre-convolution is
-disabled.
+run-time from 55.8 to 67.8 seconds, an increase of 12 seconds, or 21.5%.
 
 2. Zackay, et al. (2016) (ZOGY) image subtraction
 =================================================
@@ -209,13 +208,16 @@ subimage from the same DECam image (`Figure 4b <#figure-4b>`__).
 
    Subsections of the same DECam Zogy image subtraction as in Figure 4a.
 
-I should note that this fringing was observed by Tim Axelrod in another
-Zogy implementation when a certain PSFex PSF configuration was used
-(pixel based? too small PSF dimensions? "It certainly is a result of bad
-parameters to psfex, and in particular the footprint size for
-determining the psf being way too big for this data."). I include his
-example below in `Figure 5 <#figure-5>`__. It appears to be an
-:math:`S_{corr}` image (see Section 2.3, below).
+I should note that this fringing was observed by Tim Axelrod in `another
+Zogy implementation <https://github.com/pmvreeswijk/ZOGY>`__ when a
+certain PSFex PSF configuration was used (pixel based? too small PSF
+dimensions? "It certainly is a result of bad parameters to psfex, and in
+particular the footprint size for determining the psf being way too big
+for this data."). I include his example below in `Figure
+5 <#figure-5>`__, based upon DECam data. It appears to be an
+:math:`S_{corr}` image (see Section 2.3, below). He was able to fix the
+fringing by changing the PSFEx parameters, but is unclear on the
+details.
 
 .. figure:: _static/fig05.png
    :name: figure-5
@@ -223,7 +225,7 @@ example below in `Figure 5 <#figure-5>`__. It appears to be an
    Example Zogy image with fringing from Tim Axelrod
 
 **Timing:** The current implementation of Zogy takes roughly 26.6
-seconds, or :math:`0.78\times` as long (i.e., is :math:`\sim22\%`
+seconds, or :math:`0.63\times` as long (i.e., is :math:`\sim37\%`
 faster) to run than the AL algorithm with decorrelation enabled. There
 has been limited attempt to date to optimize the Zogy algorithm, and
 some simple profiling is likely to highlight several bottlenecks.
@@ -252,8 +254,9 @@ spatially constrained, we see that the artifacts evident in the
 spatially constrained. However, it is also evident that echo-like
 artifacts are also generated in the image-space version which can be
 severe surrounding the brightest stars. These artifacts lead to a
-greater number of false positive detections (472 vs. 257 before merging;
-227 vs. 221 after).
+greater number of false positive detections (472 vs. 257 before merging
+of positive and negative sources into a single footprint; 227 vs. 221
+after).
 
 Efforts were made to ensure that masks and variance planes are correctly
 handled in the "pure" Fourier-space version of the algorithm, such that
@@ -292,6 +295,10 @@ input images.
    Subsections of a DECam Zogy image subtraction, including warped and
    PSF-matched template, science image, and the results of pre-convolved
    AL subtraction, and the Zogy :math:`S_{corr}` likelihood image.
+
+**Timing:** The computation of the Zogy :math:`S_{corr}` image is
+roughly 10 to 20% slower than computing the standard Zogy diffim,
+depending upon whether the spatially varying options are enabled or not.
 
 2.4. Issues, unimplemented aspects, artifacts
 ---------------------------------------------
@@ -361,11 +368,6 @@ image and the resulting invalid pixels at the borders are cut away
 before passing the valid subExposure back to the ``reducer`` (see the
 inset of `Figure 7 <#figure-7>`__).
 
-**Known issue:** We note that the construction of the grid itself is
-straightforward but may be brittle for certain image dimensions. The
-requirement of adjusting grid parameters for a given image geometry
-should be addressed.
-
 The returned, modified subExposures are then stitched together by the
 ``reducer`` subtask into a final output ``Exposure``, averaging the
 overlapping regions (by default).
@@ -374,6 +376,27 @@ In order to perform spatially-varying AL decorrelation or Zogy, one
 simply needs to subclass the ``ImageMapper`` task and the
 ``ImageMapReduceConfig`` configuration class, and configure the
 ``mapper`` parameter in that new config to point to this new subclass.
+
+**Known issues:** The use of ``ImageMapReduce`` for spatially-varying
+computations slows down the given computation (AL decorrelation or Zogy)
+considerably. This is unsurprising, due to two extra sets of
+calculations which are performed in the spatially-varying case: (1)
+extra kernels are computed for each subImage; (2) multiple copies of
+each exposure are made (both in pieces for the processing, and in one
+final exposure when they are stitched together); and (3) extra image
+area is processed due to overlapping regions of expanded subImages. Not
+to mention the additional operations of splitting, and then re-combining
+the subImages into a final exposure. This could be optimized by altering
+the grid geometry. The default grid geometry splits the
+:math:`\sim 1,024 x 2,048` DECam CCD exposure into 1,128 subImages, and
+given the expanded subImages, :math:`\sim 5\%` more image is processed.
+The prior (1,128 subImages) is probably overkill given the degree of
+spatial variation that needs to be captured.
+
+We also note that the construction of the grid itself is straightforward
+but may be brittle for certain image dimensions. The requirement of
+adjusting grid geometry for the given image dimensions should be
+addressed.
 
 3.1.1. imageMapReduce: AL decorrelation
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -388,10 +411,12 @@ setting it up to use the ``DecorrelateALKernelMapper`` as its
 ``mapper``. It is this task (the ``DecorrelateALKernelSpatialTask``) is
 called from the ``makeDiffim`` task.
 
-**Timing:** Surprisingly, the spatially-varying AL decorrelation is very
-slightly *faster* than the non-spatially-varying version. The reason for
-this is unclear, since more area is convolved (due to overlapping grid
-elements) with the ``imageMapReduced`` variant.
+**Timing:** The AL with the spatially-varying decorrelation takes 126.3
+seconds, or nearly :math:`3\times` longer than the non-spatially-varying
+version. The reason for this is due to the fact that (1) more correction
+kernels are computed, and (2) more area is convolved (due to overlapping
+grid elements) with the ``imageMapReduced`` variant. See the **Known
+issues** subsection above for more on this.
 
 3.1.2. imageMapReduce: Zogy
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -406,15 +431,14 @@ subclass of ``ImageMapper`` and the corresponding
 ``DecorrelateALKernelSpatialTask``) is called from the ``makeDiffim``
 task.
 
-**Timing:** Contrary to the spatially-varying AL decorrelation, the
-spatially-varying Zogy implementation takes :math:`\sim 51.7` seconds,
-or :math:`\sim 93\%` longer than the non-spatially-varying version. The
-reasons for this is unclear, except (as mentioned above) with the
-spatially-varying variant, the Zogy procedure is actually performed on
-significantly more image area due to the necessity of overlapping grid
-elements. It is quite possible that the grid configuration could be
-modified to optimize this and bring down computation time; this has not
-been thoroughly investigated.
+**Timing:** The spatially-varying Zogy implementation takes
+:math:`\sim 55.3` seconds, or :math:`\sim 2\times` longer than the
+non-spatially-varying version. The reasons for this is unclear, except
+(as mentioned above) with the spatially-varying variant, the Zogy
+procedure is actually performed on significantly more image area due to
+the necessity of overlapping grid elements. It is quite possible that
+the grid configuration could be modified to optimize this and bring down
+computation time; this has not been thoroughly investigated.
 
 3.2. imageMapReduce: construction of new PSFs
 ---------------------------------------------
@@ -504,7 +528,76 @@ it has simply not been done.
 5. Appendix
 ===========
 
-5.1. Commands for running image subtraction in various modes
+5.1. Summary of known issues with AL decorrelation an Zogy
+----------------------------------------------------------
+
+While I described at various points above the known issues with the
+current LSST implementations of AL decorrelation and/or Zogy, here is a
+simple overview/summary of those known issues, including (if they have
+been made) their related tickets. It should be added that since the Zogy
+code has only recently been added to the LSST stack and minimally
+applied to actual data, there could be other issues that are not yet
+known.
+
+5.2. Summary of diffim algorithm timings
+----------------------------------------
+
+At the end of each subsection above, I listed the run-time timings of
+each algorithm/component. Below is a summary table of those findings.
+These are for runs on a single DECam CCD exposure, with a single CCD
+exposure used as the template, using a single CPU on a Macbook Pro with
+a 2.5 GHz Intel Core i7.
+
++-------------------+------------+--------------+---------------+----+
+| Alg.              | Spatial?   | Pre-conv.?   | Time (sec.)   |    |
++===================+============+==============+===============+====+
+| AL                | -          | No           | 31.8          |    |
++-------------------+------------+--------------+---------------+----+
+| AL + decorr.      | No         | No           | 42.5          |    |
++-------------------+------------+--------------+---------------+----+
+| AL + decorr.      | Yes        | No           | 126.3         |    |
++-------------------+------------+--------------+---------------+----+
+| Zogy              | No         | No           | 26.6          |    |
++-------------------+------------+--------------+---------------+----+
+| Zogy              | Yes        | No           | 51.7          |    |
++-------------------+------------+--------------+---------------+----+
+| Zogy (im-space)   | No         | No           | 55.4          |    |
++-------------------+------------+--------------+---------------+----+
+| Zogy (im-space)   | Yes        | No           | 280.0         |    |
++-------------------+------------+--------------+---------------+----+
+| AL                | -          | Yes          | 55.8          |    |
++-------------------+------------+--------------+---------------+----+
+| AL + decorr.      | No         | Yes          | 67.8          |    |
++-------------------+------------+--------------+---------------+----+
+| AL + decorr.      | Yes        | Yes          | 148.4         |    |
++-------------------+------------+--------------+---------------+----+
+| Zogy              | No         | Yes          | 32.7          |    |
++-------------------+------------+--------------+---------------+----+
+| Zogy              | Yes        | Yes          | 78.7          |    |
++-------------------+------------+--------------+---------------+----+
+
+5.1. Random thoughts and notes gathered during research
+-------------------------------------------------------
+
+1. Currently the Zogy implementation uses ``numpy.fft.fft2`` and related
+   for computing 2-D FFTs. It should be noted that the ``scipy.fftpack``
+   implementation has been found to be slightly faster, while the
+   ``fftw`` library (with python bindings
+   `pyFFTW <https://pypi.python.org/pypi/pyFFTW>`__ can be significantly
+   faster. Moreover, there is little effort made to pad matrices to
+   :math:`2^n` dimensions, which if done can also speed up the Fourier
+   transforms. Little effort has been made to investigate this further
+   since at this point it is not clear how much the FFTs bottleneck the
+   procedure.
+
+2. The primary bottleneck that appears to be slowing down the AL
+   decorrelation is the convolution of the diffim with the decorrelation
+   kernel. This is currently performed by ``afw`` code and takes
+   :math:`\sim 10` seconds for the single DECam exposure. It is not
+   clear if the decorrelation kernel is not properly optimized for this
+   convolution, or what else might be the cause for this slowdown.
+
+5.2. Commands for running image subtraction in various modes
 ------------------------------------------------------------
 
 Example output from the various runs of the image subtraction pipeline
