@@ -619,7 +619,7 @@ a 2.5 GHz Intel Core i7.
 | Zogy              | Yes        | Yes          | 78.7          |    |
 +-------------------+------------+--------------+---------------+----+
 
-5.1. Random thoughts and notes gathered during research
+5.3. Random thoughts and notes gathered during research
 -------------------------------------------------------
 
 1. Currently the Zogy implementation uses ``numpy.fft.fft2`` and related
@@ -640,7 +640,7 @@ a 2.5 GHz Intel Core i7.
    clear if the decorrelation kernel is not properly optimized for this
    convolution, or what else might be the cause for this slowdown.
 
-5.2. Commands for running image subtraction in various modes
+5.4. Commands for running image subtraction in various modes
 ------------------------------------------------------------
 
 Example output from the various runs of the image subtraction pipeline
