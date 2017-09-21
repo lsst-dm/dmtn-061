@@ -36,9 +36,9 @@ There are a very large number of configuration parameters which affect
 the quality of the subtraction. In general, the defaults work well,
 although for images with different pixel-scales and/or PSF sizes, these
 parameters may need to be tuned. Many of these important parameters are
-buried deep in the ``kernel`` config parameter of the ``subtract``
-algorithm (a reference to the ``lsst.ip.diffim.ImagePsfMatchTask``
-task).
+buried deep in the ``kernel`` config parameter of the
+``lsst.ip.diffim.ImagePsfMatchTask`` task (which is the ``subtract``
+subtask of ``MakeDiffimTask``).
 
 In `Figure 1 <#figure-1>`__ and `Figure 2 <#figure-2>`__, we show an
 image subtraction using the AL algorithm on an example DECam image. Here
@@ -113,8 +113,11 @@ default (decorrelated) AL subtractions on the bottom.
    non-decorrelated AL difference images.
 
 There occasionally is a problem with decorrelation that I have not been
-able to narrow down, other than that I believe it is related to the
-shape/structure of the PSF matching kernel. Note that if the term in the
+able to narrow down. This problem manifests as noise with a periodic
+pattern, apparently an overestimated noise problem with some aliasing.
+This issue is rather rare and I have seen it particularly on notably
+noisy or poorly reduced images. I believe it is related to the
+shape/structure of the PSF matching kernel. If the term in the
 denominator of the expression for :math:`\psi(k)` is too close to zero,
 it will lead to large values in the kernel, which could lead to strange
 aliasing artifacts in the resulting decorrelated diffim.
@@ -182,46 +185,64 @@ is functional. It is implemented in pure python; although much of the
 expensive calculations are performed under-the-hood in ``C`` or
 ``Fortran`` via ``scipy`` or ``afw``, be they FFTs or convolutions.
 
-We show an example Zogy diffim below in `Figure 4a <#figure-4a>`__. The
+We show an example Zogy diffim below in `Figure 4 <#figure-4>`__. The
 standard Zogy implementation, in which all convolutions are performed in
 frequency space, is on the bottom-left. It shows clear signs of aliasing
 and fringing-related artifacts around bright stars. It also shows (with
 the negative artifacts near fainter stars) the effect of the apparent
 inaccurate relative flux calibration between the template and science
-images. (Note that no attempt to improve the relative calibration is
+images. (Note that **no attempt to improve the relative calibration is
 performed in the Zogy code -- it is expected to be accurately performed
-during initial exposure calibration. This reveals a weakness of Zogy
+during initial exposure calibration**. This reveals a weakness of Zogy
 relative to AL -- the requirement of accurate [relative] calibration
-between the two images.) This may be seen more readily in an other
-subimage from the same DECam image (`Figure 4b <#figure-4b>`__).
+between the two images; while AL can incorporate any mis-calibration in
+the matching kernel).
+
+This may be seen more readily in an other subimage from the same DECam
+image (`Figure 5 <#figure-5>`__). I should note that while these
+negative residuals are evident for this example pair of exposures, it is
+actually not frequently seen in real images; it might simply be a case
+where these two images were not (for some reason) accurately
+flux-calibrated. Again, we assume that relative flux calibration will be
+accurately performed by the LSST calibration step, and this will not be
+an issue. Alternatively, it should not be difficult to fit the relative
+flux normalization terms, and incorporate them into the Zogy expression
+(they are already included in the code as :math:`F_r` and :math:`F_n`
+and set by default to 1) or re-scale one of the images prior to
+subtraction.
 
 .. figure:: _static/fig04a.png
-   :name: figure-4a
+   :name: figure-4
 
    Subsections of a DECam Zogy image subtraction, including warped and
    PSF-matched template, science image, and the results of the
    "standard" and image-space versions of the Zogy algorithm.
 
 .. figure:: _static/fig04b.png
-   :name: figure-4b
+   :name: figure-5
 
    Subsections of the same DECam Zogy image subtraction as in Figure 4a.
 
-I should note that this fringing was observed by Tim Axelrod in `another
-Zogy implementation <https://github.com/pmvreeswijk/ZOGY>`__ when a
-certain PSFex PSF configuration was used (pixel based? too small PSF
-dimensions? "It certainly is a result of bad parameters to psfex, and in
-particular the footprint size for determining the psf being way too big
-for this data."). I include his example below in `Figure
-5 <#figure-5>`__, based upon DECam data. It appears to be an
-:math:`S_{corr}` image (see Section 2.3, below). He was able to fix the
-fringing by changing the PSFEx parameters, but is unclear on the
-details.
+**Some additional notes about the fringing:**
 
-.. figure:: _static/fig05.png
-   :name: figure-5
-
-   Example Zogy image with fringing from Tim Axelrod
+1. This fringing was observed by Tim Axelrod in `another Zogy
+   implementation <https://github.com/pmvreeswijk/ZOGY>`__ when a
+   certain PSFex PSF configuration was used (pixel based? too small PSF
+   dimensions? "It certainly is a result of bad parameters to psfex, and
+   in particular the footprint size for determining the psf being way
+   too big for this data."). I include his example below in `Figure
+   6 <#figure-6>`__, based upon DECam data. It appears to be an
+   :math:`S_{corr}` image (see Section 2.3, below). He was able to fix
+   the fringing by changing the PSFEx parameters, but is unclear on the
+   details. |Example Zogy image with fringing from Tim Axelrod|
+2. The point in (1.) above, that the fringing might be a PSFex
+   PSF-related artifact is consistent with the fact that I only see this
+   fringing in real data where the PSFs have been measured (in the LSST
+   stack, as I mentioned, the default is to use PSFex). When I
+   originally ran the Zogy code on simulated images with smooth,
+   double-Gaussian elliptical PSFs, I did not see such fringing. An
+   example notebook where this is evident may be found
+   `here <https://github.com/djreiss/diffimTests/blob/master/notebooks/28.%20algorithm%20shootout%20-%20updated-dense.ipynb>`__.
 
 **Timing:** The current implementation of Zogy takes roughly 26.6
 seconds, or :math:`0.63\times` as long (i.e., is :math:`\sim37\%`
@@ -280,16 +301,16 @@ of computing this image. Because of its similarity to the
 pre-convolution option in AL, it is enabled in the
 ``imageDifference.py`` command-line script by setting the config option
 ``makeDiffim.doPreConvolve`` to ``True``. We show an example
-:math:`S_{corr}` image in the bottom-right of `Figure 6 <#figure-6>`__,
+:math:`S_{corr}` image in the bottom-right of `Figure 7 <#figure-7>`__,
 which may be compared with the AL version (non-decorrelated) on the
-bottom-left of `Figure 6 <#figure-6>`__ and both decorrelated and
+bottom-left of `Figure 7 <#figure-7>`__ and both decorrelated and
 non-decorrelated versions of AL at the bottom of `Figure
 3 <#figure-3>`__. The :math:`S_{corr}` image again shows (what I believe
 to be) the effect of inaccurate relative calibration between the two
 input images.
 
 .. figure:: _static/fig06.png
-   :name: figure-6
+   :name: figure-7
 
    Subsections of a DECam Zogy image subtraction, including warped and
    PSF-matched template, science image, and the results of pre-convolved
@@ -322,13 +343,13 @@ an analogy with the ``map-reduce`` algorithm, so it is called the
 -------------------------------------------
 
 The ``imageMapReduce`` framework may be visualized via the following
-schematic (`Figure 7 <#figure-7>`__). The ``ImageMapReduceTask`` chops
+schematic (`Figure 8 <#figure-8>`__). The ``ImageMapReduceTask`` chops
 up the input ``Exposure`` into subExposures, which are then processed by
 the ``ImageMapper``. The modified subExposures are stitched back
 together by the ``ImageReducer`` into a new ``Exposure``.
 
 .. figure:: _static/fig07.png
-   :name: figure-7
+   :name: figure-8
 
    Schematic of the ``imageMapReduce`` framework for performing
    spatially-varying calculations on one or more exposures. The inset
@@ -365,7 +386,7 @@ corresponding to the original grid element size is returned. This allows
 operations such as convolutions or FFTs to be performed on the larger
 image and the resulting invalid pixels at the borders are cut away
 before passing the valid subExposure back to the ``reducer`` (see the
-inset of `Figure 7 <#figure-7>`__).
+inset of `Figure 8 <#figure-8>`__).
 
 The returned, modified subExposures are then stitched together by the
 ``reducer`` subtask into a final output ``Exposure``, averaging the
@@ -778,3 +799,5 @@ was performed):
     time makeDiffim.py calexpDir_b1631 --output DELETEME --id visit=288976 ccdnum=11 \
         --templateId visit=289820 --configfile makeDiffimConfig.py \
         --config doDecorrelation=True --config doPreConvolve=True
+
+.. |Example Zogy image with fringing from Tim Axelrod| image:: _static/fig05.png
