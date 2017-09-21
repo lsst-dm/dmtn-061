@@ -1,7 +1,6 @@
 :tocdepth: 2
-**Important note:** There exists an un-merged branch
-``u/djreiss/DM-3704`` of ``ip_diffim`` and ``pipe_tasks`` which
-implements tickets
+**Important note:** There exists an un-merged branch ``tickets/DM-3704``
+of ``ip_diffim`` and ``pipe_tasks`` which implements tickets
 `DM-3704 <https://jira.lsstcorp.org/browse/DM-3704>`__,
 `DM-5294 <https://jira.lsstcorp.org/browse/DM-5294>`__ and
 `DM-5295 <https://jira.lsstcorp.org/browse/DM-5295>`__, a refactor of
@@ -129,8 +128,8 @@ when accounting for spatially-varying PSFs and noise.
 algorithm on a sample DECam exposure by :math:`\sim 10.5` seconds, or
 about 33%.
 
-1.2.1. Decorrelation + pre-convolution = trouble
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+1.2.1. Decorrelation + pre-convolution
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The variant of the expression for performing decorrelation in the case
 of pre-convolution (described above) is given by the deconvolution
@@ -688,13 +687,9 @@ the redirected output text files in this repo as well.
               --configfile diffimConfig.py --config makeDiffim.doDecorrelation=False >& \
                 output_AL.txt
 
-::
-
     imageDifference.py calexpDir_b1631 --output decamDirTest_ALDec_noSpatial \
               --id visit=289820 ccdnum=11 --templateId visit=288976 \
               --configfile diffimConfig.py >& output_ALDec_noSpatial.txt
-
-::
 
     imageDifference.py calexpDir_b1631 --output decamDirTest_ALDec_yesSpatial \
               --id visit=289820 ccdnum=11 --templateId visit=288976 \
@@ -710,22 +705,16 @@ the redirected output text files in this repo as well.
               --configfile diffimConfig.py --config makeDiffim.subtract='zogy' >& \ 
                     output_Zogy_noSpatial.txt
 
-::
-
     imageDifference.py calexpDir_b1631 --output decamDirTest_Zogy_yesSpatial \
               --id visit=289820 ccdnum=11 --templateId visit=288976 \
               --configfile diffimConfig.py --config makeDiffim.subtract='zogy' \
               --config makeDiffim.doSpatiallyVarying=True >& output_Zogy_yesSpatial.txt
-
-::
 
     # replace 'inImageSpace=False' with 'inImageSpace=True' in diffimconfig.py
     imageDifference.py calexpDir_b1631 --output decamDirTest_ZogyImSpace_noSpatial \
                 --id visit=289820 ccdnum=11 --templateId visit=288976 \
                 --configfile diffimConfig.py --config makeDiffim.subtract='zogy' \
                     >& output_ZogyImSpace_noSpatial.txt
-
-::
 
     # replace 'inImageSpace=False' with 'inImageSpace=True' in diffimconfig.py
     imageDifference.py calexpDir_b1631 --output decamDirTest_ZogyImSpace_yesSpatial \
