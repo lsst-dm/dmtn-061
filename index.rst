@@ -225,6 +225,15 @@ subtraction.
 
 **Some additional notes about the fringing:**
 
+1. The fringing might be a PSFex
+   PSF-related artifact is consistent with the fact that I only see this
+   fringing in real data where the PSFs have been measured (in the LSST
+   stack, as I mentioned, the default is to use PSFex). When I
+   originally ran the Zogy code on simulated images with smooth,
+   double-Gaussian elliptical PSFs, I did not see such fringing. An
+   example notebook where this is evident may be found
+   `here <https://github.com/djreiss/diffimTests/blob/master/notebooks/28.%20algorithm%20shootout%20-%20updated-dense.ipynb>`__.
+   
 1. This fringing was observed by Tim Axelrod in `another Zogy
    implementation <https://github.com/pmvreeswijk/ZOGY>`__ when a
    certain PSFex PSF configuration was used (pixel based? too small PSF
@@ -234,15 +243,12 @@ subtraction.
    6 <#figure-6>`__, based upon DECam data. It appears to be an
    :math:`S_{corr}` image (see Section 2.3, below). He was able to fix
    the fringing by changing the PSFEx parameters, but is unclear on the
-   details. |Example Zogy image with fringing from Tim Axelrod|
-2. The point in (1.) above, that the fringing might be a PSFex
-   PSF-related artifact is consistent with the fact that I only see this
-   fringing in real data where the PSFs have been measured (in the LSST
-   stack, as I mentioned, the default is to use PSFex). When I
-   originally ran the Zogy code on simulated images with smooth,
-   double-Gaussian elliptical PSFs, I did not see such fringing. An
-   example notebook where this is evident may be found
-   `here <https://github.com/djreiss/diffimTests/blob/master/notebooks/28.%20algorithm%20shootout%20-%20updated-dense.ipynb>`__.
+   details. 
+   
+.. figure:: _static/fig05.png
+   :name: figure-6
+
+   Example Zogy image with fringing from Tim Axelrod
 
 **Timing:** The current implementation of Zogy takes roughly 26.6
 seconds, or :math:`0.63\times` as long (i.e., is :math:`\sim37\%`
