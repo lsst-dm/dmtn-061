@@ -153,7 +153,7 @@ to strange aliasing-type artifacts in the resulting decorrelated
 likelihood image subtraction, which are extremely large and globally
 affect the pixel statistics of the decorrelated, pre-filtered image
 subtraction (i.e., give them very large variances). This effect has been
-decreased by setting all pixels that are :math:`\leq 10^{03}` to
+decreased by setting all pixels that are :math:`\leq 10^{-3}` to
 :math:`10^{-3}` in the PSF prior to FFT-ing, but the effect still
 remains. Artifacts around bright stars/poorly-subtracted objects are
 amplified, and will be difficult to model (visible in `Figure
@@ -165,7 +165,7 @@ flagging.
 
    Subsections of a pre-convolved DECam image subtraction, including
    warped and PSF-matched template, science image, and both decorrelated
-   and non-decorrelated mmatch-filtered AL difference images.
+   and non-decorrelated match-filtered AL difference images.
 
 It should also be noted that currently the spatially-varying
 decorrelation (described below) is functional in the case when
@@ -257,7 +257,7 @@ some simple profiling is likely to highlight several bottlenecks.
 
 **Additional known issue:** Zogy relies upon FFTs of the PSFs of both
 input images. If those PSFs are not the same dimension, then one of them
-needs to be padded or trimmed. We also need to ensure that each PSFs are
+needs to be padded or trimmed. We also need to ensure that the PSFs are
 centered correctly, and centered at the same pixel coordinate. There is
 much code in ``lsst.ip.diffim.zogy`` for making these corrections, yet
 sometimes the resulting Zogy diffim has 1-pixel offsets from expected. I
@@ -363,7 +363,7 @@ together by the ``ImageReducer`` into a new ``Exposure``.
 
 The ``ImageMapReduceTask`` accepts a set of configuration parameters
 that specify how the grid is constructed (grid element size and
-spacings). The grid specification is flexible so that it may containg
+spacings). The grid specification is flexible so that it may contain
 arbitrary overlapping regions between grid elements, and be of arbitrary
 dimensions. The dimensions may also be specified in units of the FWHM of
 the PSF of the input ``Exposure``. An important detail is that one may
@@ -433,8 +433,8 @@ corresponding ``DecorrelateALKernelMapReduceConfig`` subclass of
 ``ImageMapReduceConfig``. Then the ``DecorrelateALKernelSpatialTask``
 pipe task wraps the construction of the ``ImageMapReduceTask`` and
 setting it up to use the ``DecorrelateALKernelMapper`` as its
-``mapper``. It is this task (the ``DecorrelateALKernelSpatialTask``) is
-called from the ``makeDiffim`` task.
+``mapper``. It is this task (the ``DecorrelateALKernelSpatialTask``)
+that is called from the ``makeDiffim`` task.
 
 **Timing:** The AL with the spatially-varying decorrelation takes 108.0
 seconds with the default grid geometry configuration, or
@@ -479,7 +479,7 @@ information. A natural choice was to use a
 spatially-varying PSF by averaging PSFs from images which contributed to
 various regions of a coadd. Since an Exposure constructed by
 ``imageMapReduce`` is essentially a coadd, this seemed like a simple and
-natural choice. It however has severall disadvantages.
+natural choice. It however has several disadvantages.
 
 3.2.1. ``CoaddPsf`` issues
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -556,8 +556,8 @@ it has simply not been done.
 5. Appendix
 ===========
 
-5.1. Summary of known issues with AL decorrelation an Zogy
-----------------------------------------------------------
+5.1. Summary of known issues with AL decorrelation and Zogy
+-----------------------------------------------------------
 
 While I described at various points above the known issues with the
 current LSST implementations of AL decorrelation and/or Zogy, here is a
