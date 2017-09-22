@@ -1,0 +1,42 @@
+CameraMapper INFO: Loading exposure registry from /Users/dreiss/GIT_REPOS/TICKETS/DM-3704/temp/calexpDir_b1631/registry.sqlite3
+CameraMapper INFO: Loading Posix calib registry from /Users/dreiss/GIT_REPOS/TICKETS/DM-3704/temp/calexpDir_b1631
+CameraMapper INFO: Loading Posix calib registry from /Users/dreiss/GIT_REPOS/TICKETS/DM-3704/temp/decamDirTest_AL
+root INFO: Running: /Users/dreiss/GIT_REPOS/TICKETS/DM-3704/temp/pipe_tasks/bin/imageDifference2.py calexpDir_b1631 --output decamDirTest_AL --id visit=289820 ccdnum=11 --templateId visit=288976 --configfile diffimconfig.py --clobber-config --clobber-versions --config makeDiffim.doDecorrelation=False
+imageDifference INFO: Processing DataId(initialdata={'visit': 289820, 'ccdnum': 11}, tag=set([]))
+imageDifference.getTemplate INFO: Fetching calexp (DataId(initialdata={'ccdnum': 11, 'visit': 288976}, tag=set([]))) as template.
+imageDifference.makeDiffim INFO: Source selection via src product
+/Users/dreiss/lsstsw/stack/DarwinX86/meas_algorithms/13.0-21-g4da7aa72/python/lsst/meas/algorithms/objectSizeStarSelector.py:396: RuntimeWarning: invalid value encountered in less
+  bad = numpy.logical_or(bad, flux < self.config.fluxMin)
+/Users/dreiss/lsstsw/stack/DarwinX86/meas_algorithms/13.0-21-g4da7aa72/python/lsst/meas/algorithms/objectSizeStarSelector.py:399: RuntimeWarning: invalid value encountered in less
+  bad = numpy.logical_or(bad, width < self.config.widthMin)
+/Users/dreiss/lsstsw/stack/DarwinX86/meas_algorithms/13.0-21-g4da7aa72/python/lsst/meas/algorithms/objectSizeStarSelector.py:400: RuntimeWarning: invalid value encountered in greater
+  bad = numpy.logical_or(bad, width > self.config.widthMax)
+imageDifference.makeDiffim INFO: Selected 66 / 1888 sources for Psf matching (17 for control sample)
+imageDifference.makeDiffim INFO: Subtracting images
+imageDifference.makeDiffim.subtract INFO: Template Wcs : 2.710179,-0.102466 -> 2.715435,-0.105083
+imageDifference.makeDiffim.subtract INFO: Science Wcs : 2.710194,-0.102443 -> 2.715450,-0.105059
+imageDifference.makeDiffim.subtract INFO: Astrometrically registering template to science image
+imageDifference.makeDiffim.subtract INFO: templateFwhmPix: 3.81566846621
+imageDifference.makeDiffim.subtract INFO: scienceFwhmPix: 4.45161333651
+imageDifference.makeDiffim.subtract INFO: Growing 66 kernel candidate stars by 23 pixels
+imageDifference.makeDiffim.subtract INFO: Selected 58 / 66 sources for KernelCandidacy
+imageDifference.makeDiffim.subtract INFO: Matching Psf FWHM 3.82 -> 4.45 pix
+imageDifference.makeDiffim.subtract INFO: Final spatial kernel sum 0.887
+imageDifference.makeDiffim.subtract INFO: Spatial model condition number 2.742e+08
+imageDifference.makeDiffim.subtract INFO: Doing stats of kernel candidates used in the spatial fit.
+imageDifference.makeDiffim.subtract INFO: 58 candidates total, 9 rejected, 49 used
+imageDifference.makeDiffim.subtract INFO: Spatial kernel model well constrained; 49 candidates, 3 terms, 27 bases
+imageDifference.makeDiffim.subtract INFO: Spatial background model appears well constrained; 49 candidates, 1 terms
+imageDifference.makeDiffim INFO: Computing diffim PSF
+imageDifference.makeDiffim INFO: Writing matched exposure, deepDiff_matchedExp
+imageDifference.makeDiffim INFO: Writing subtracted exposure, deepDiff_differenceExp
+imageDifference.processDiffim INFO: Running diaSource detection
+imageDifference.processDiffim.detection INFO: Detected 59 positive sources to 5.5 sigma.
+imageDifference.processDiffim.detection INFO: Detected 80 negative sources to 5.5 sigma
+imageDifference.processDiffim INFO: Merging detections into 110 sources
+imageDifference.processDiffim INFO: Running diaSource measurement: newDipoleFitting=True
+imageDifference.processDiffim.measurement INFO: Measuring 110 sources (110 parents, 0 children) 
+ip_diffim_DipoleFit WARN: DipoleFitPlugin failed on record 124476789417312410: dipole fit failure
+imageDifference.processDiffim INFO: Writing diaSources, deepDiff_diaSrc
+Exception AttributeError: "'super' object has no attribute '__del__'" in <bound method SqliteRegistry.__del__ of <lsst.daf.persistence.registries.SqliteRegistry object at 0x83f405fd0>> ignored
+44.411u 2.920s 0:45.19 104.7%	0+0k 2+75io 14323pf+0w
